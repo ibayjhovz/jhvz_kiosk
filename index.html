@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jhvz Kiosk</title>
+    <title>JHVZ Kiosk</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.js"></script>
@@ -31,7 +31,7 @@
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
             <h1 class="text-xl sm:text-2xl font-black text-gray-800 tracking-wide flex items-center gap-2">
                 <i class="fa-solid fa-cloud-bolt text-emerald-600"></i>
-                <span>Jhvz Kiosk</span>
+                <span>JHVZ Kiosk</span>
             </h1>
             
             <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
@@ -383,16 +383,28 @@
     const db = new Dexie("ItemizedKioskPOSDatabase");
     db.version(1).stores({ orders: '++id, timestamp, totalAmount, itemsCount' });
 
+    // 📦 DEFAULT STATIC INVENTORY ITEMS
+    const DEFAULT_PRODUCTS = [
+        { id: 1, name: 'Premium Coffee Blend', price: 4.50, category: 'Beverages', image: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400' },
+        { id: 2, name: 'Artisanal Green Tea', price: 3.75, category: 'Beverages', image: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=400' },
+        { id: 3, name: 'Toasted Almond Croissant', price: 4.95, category: 'Bakery', image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400' },
+        { id: 4, name: 'Gluten-Free Blueberry Muffin', price: 3.80, category: 'Bakery', image: 'https://images.unsplash.com/photo-1607958996333-41aef7caefaa?w=400' },
+        { id: 5, name: 'Avocado Sourdough Toast', price: 8.50, category: 'Snacks', image: 'https://images.unsplash.com/photo-1541532713592-79a0317b6b77?w=400' },
+        { id: 6, name: 'Smoked Salmon Bagel', price: 9.95, category: 'Snacks', image: 'https://images.unsplash.com/photo-1541532713592-79a0317b6b77?w=400' }
+    ];
+
     createApp({
         setup() {
-            const products = ref([
-                { id: 1, name: 'Premium Coffee Blend', price: 4.50, category: 'Beverages', image: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400' },
-                { id: 2, name: 'Artisanal Green Tea', price: 3.75, category: 'Beverages', image: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=400' },
-                { id: 3, name: 'Toasted Almond Croissant', price: 4.95, category: 'Bakery', image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400' },
-                { id: 4, name: 'Gluten-Free Blueberry Muffin', price: 3.80, category: 'Bakery', image: 'https://images.unsplash.com/photo-1607958996333-41aef7caefaa?w=400' },
-                { id: 5, name: 'Avocado Sourdough Toast', price: 8.50, category: 'Snacks', image: 'https://images.unsplash.com/photo-1541532713592-79a0317b6b77?w=400' },
-                { id: 6, name: 'Smoked Salmon Bagel', price: 9.95, category: 'Snacks', image: 'https://images.unsplash.com/photo-1541532713592-79a0317b6b77?w=400' }
-            ]);
+            const products = ref([]);
+            
+            // 💾 INITIALIZATION: Pull existing items from localStorage or use defaults if empty
+            const savedProducts = localStorage.getItem('cloudpos_inventory');
+            if (savedProducts) {
+                products.value = JSON.parse(savedProducts);
+            } else {
+                products.value = [...DEFAULT_PRODUCTS];
+                localStorage.setItem('cloudpos_inventory', JSON.stringify(products.value));
+            }
 
             const categories = ref(['Beverages', 'Bakery', 'Snacks']);
             const activeCategory = ref('All');
@@ -404,7 +416,6 @@
             const reportOrders = ref([]);
             const inspectedOrder = ref(null);
             
-            // Image link property replaced with safe placeholder until user uploads a file
             const newProduct = ref({ name: '', price: null, category: 'Beverages', image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400' });
             
             let chartInstance = null;
@@ -562,7 +573,6 @@
                 });
             };
 
-            // CAPTURE LOCAL IMAGE FILE AND TRANSLATE TO LOCAL DATA URL STRING
             const handleImageUpload = (event) => {
                 const file = event.target.files[0];
                 if (file) {
@@ -574,17 +584,21 @@
                 }
             };
 
+            // 💾 SAVES INVENTORY: Adds new item and registers it to localStorage right away
             const addNewProduct = () => {
                 const id = products.value.length ? Math.max(...products.value.map(p => p.id)) + 1 : 1;
                 products.value.push({ ...newProduct.value, id });
                 
-                // Clear state inputs back to generic default form template properties
+                localStorage.setItem('cloudpos_inventory', JSON.stringify(products.value));
                 newProduct.value = { name: '', price: null, category: 'Beverages', image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400' };
             };
 
+            // 💾 SAVES INVENTORY: Removes target item from state and localStorage
             const deleteProduct = (id) => {
                 products.value = products.value.filter(p => p.id !== id);
                 cart.value = cart.value.filter(item => item.product.id !== id);
+                
+                localStorage.setItem('cloudpos_inventory', JSON.stringify(products.value));
             };
 
             return {
